@@ -13,33 +13,56 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
 </head>
 
+
 <body>
     <div class="container">
-        <canvas class="output_canvas" width="1280px" height="720px"></canvas>
-        <div class="landmark-grid-container"></div>
+        <canvas class="output_canvas" style="transform:scaleX(-1)" width="640px" height="360px"></canvas>
+        <canvas class="save_canvas" style="transform:scaleX(-1)" width="640px" height="360px"></canvas><br>
+        <div class="container">
+            <button onclick="myFunction()">Start</button>
+            <button onclick="resetCanvas()">Reset</button>
+        </div>
         <video class="input_video"></video>
     </div>
 </body>
 
 </html>
 
-<script type="module">
+<script>
     const videoElement = document.getElementsByClassName('input_video')[0];
     const canvasElement = document.getElementsByClassName('output_canvas')[0];
+    const saveElement = document.getElementsByClassName('save_canvas')[0];
+    const saveCtx = saveElement.getContext('2d');
     const canvasCtx = canvasElement.getContext('2d');
-    const landmarkContainer = document.getElementsByClassName('landmark-grid-container')[0];
-    const grid = new LandmarkGrid(landmarkContainer);
+    last_pic = -1;
+    n_images = 5;
+
+    function myFunction() {
+        console.log('Starting Recording');
+        last_pic = Date.now() - 1000;
+        n_images = 5;
+    }
+
+    function resetCanvas() {
+        console.log('Resetting Recording');
+        saveCtx.fillStyle = "rgba(255, 255, 255)";//'#00FF00';
+        saveCtx.fillRect(0, 0, 640, 360);
+        saveCtx.beginPath();
+        saveCtx.moveTo(0, 0);
+        saveCtx.lineTo(640, 0);
+        saveCtx.lineTo(640, 360);
+        saveCtx.lineTo(0, 360);
+        saveCtx.lineTo(0, 0);
+        saveCtx.stroke();
+    }
 
     function onResults(results) {
         if (!results.poseLandmarks) {
-            grid.updateLandmarks([]);
             return;
         }
 
         canvasCtx.save();
         canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-        canvasCtx.drawImage(results.segmentationMask, 0, 0,
-            canvasElement.width, canvasElement.height);
 
         // Only overwrite existing pixels.
         canvasCtx.globalCompositeOperation = 'source-in';
@@ -57,8 +80,27 @@
         drawLandmarks(canvasCtx, results.poseLandmarks,
             { color: '#FF0000', lineWidth: 2 });
         canvasCtx.restore();
+        if (last_pic > 0) {
+            if (Date.now() - last_pic >= 1000) {
+                saveCtx.beginPath();
+                saveCtx.moveTo((results.poseLandmarks[0].x * 640 - 320) * (1 - n_images / 5) + 320, (results.poseLandmarks[0].y * 360 - 180) * (1 - n_images / 5) + 180);
+                saveCtx.lineTo((results.poseLandmarks[15].x * 640 - 320) * (1 - n_images / 5) + 320, (results.poseLandmarks[15].y * 360 - 180) * (1 - n_images / 5) + 180);
+                saveCtx.lineTo((results.poseLandmarks[27].x * 640 - 320) * (1 - n_images / 5) + 320, (results.poseLandmarks[27].y * 360 - 180) * (1 - n_images / 5) + 180);
+                saveCtx.lineTo((results.poseLandmarks[28].x * 640 - 320) * (1 - n_images / 5) + 320, (results.poseLandmarks[28].y * 360 - 180) * (1 - n_images / 5) + 180);
+                saveCtx.lineTo((results.poseLandmarks[16].x * 640 - 320) * (1 - n_images / 5) + 320, (results.poseLandmarks[16].y * 360 - 180) * (1 - n_images / 5) + 180);
+                saveCtx.lineTo((results.poseLandmarks[0].x * 640 - 320) * (1 - n_images / 5) + 320, (results.poseLandmarks[0].y * 360 - 180) * (1 - n_images / 5) + 180);
+                saveCtx.stroke();
+                last_pic = Date.now()
+                n_images = n_images - 1
+                if (n_images <= 0) {
+                    last_pic = -1
+                    console.log('Ending Recording');
+                }
+            }
+        }
 
-        grid.updateLandmarks(results.poseWorldLandmarks);
+
+        console.log(results.poseLandmarks[0]);
     }
 
     const pose = new Pose({
@@ -84,4 +126,6 @@
         height: 720
     });
     camera.start();
+    resetCanvas();
+
 </script>

@@ -16,13 +16,9 @@
 
 <body>
     <div class="container">
-        <canvas class="output_canvas" style="transform:scaleX(-1)" width="640px" height="360px"></canvas>
-        <canvas class="save_canvas" style="transform:scaleX(-1)" width="640px" height="360px"></canvas><br>
-        <div class="container">
-            <button onclick="myFunction()">Start</button>
-            <button onclick="resetCanvas()">Reset</button>
-        </div>
-        <video class="input_video"></video>
+        <canvas class="output_canvas" style="transform:scaleX(-1)" width="500px" height="700px"></canvas>
+        <canvas class="save_canvas" style="transform:scaleX(-1)" width="500px" height="700px"></canvas><br>
+        <video class="input_video" style="visibility: hidden;"></video>
     </div>
 </body>
 
@@ -34,26 +30,23 @@
     const saveElement = document.getElementsByClassName('save_canvas')[0];
     const saveCtx = saveElement.getContext('2d');
     const canvasCtx = canvasElement.getContext('2d');
-    last_pic = -1;
-    n_images = 5;
-
-    function myFunction() {
-        console.log('Starting Recording');
-        last_pic = Date.now() - 1000;
-        n_images = 5;
-    }
+    const imageSize = 720; //720p image size
+    const videoWidth = imageSize * 5 / 7; // for landscape: 1280
+    const videoHeight = imageSize; // for landscape: 720
+    last_pic = 1;
+    n_images = 10;
 
     function resetCanvas() {
         console.log('Resetting Recording');
-        saveCtx.fillStyle = "rgba(255, 255, 255)";//'#00FF00';
-        saveCtx.fillRect(0, 0, 640, 360);
-        saveCtx.beginPath();
-        saveCtx.moveTo(0, 0);
-        saveCtx.lineTo(640, 0);
-        saveCtx.lineTo(640, 360);
-        saveCtx.lineTo(0, 360);
-        saveCtx.lineTo(0, 0);
-        saveCtx.stroke();
+        saveCtx.fillStyle = "rgba(255, 255, 255)";
+        saveCtx.fillRect(1, 1, videoWidth, videoHeight);
+        // saveCtx.beginPath();
+        // saveCtx.moveTo(0, 0);
+        // saveCtx.lineTo(videoWidth - 1, 0);
+        // saveCtx.lineTo(videoWidth - 1, videoHeight - 1);
+        // saveCtx.lineTo(0, videoHeight - 1);
+        // saveCtx.lineTo(0, 0);
+        // saveCtx.stroke();
     }
 
     function onResults(results) {
@@ -80,22 +73,21 @@
         drawLandmarks(canvasCtx, results.poseLandmarks,
             { color: '#FF0000', lineWidth: 2 });
         canvasCtx.restore();
-        if (last_pic > 0) {
-            if (Date.now() - last_pic >= 1000) {
-                saveCtx.beginPath();
-                saveCtx.moveTo((results.poseLandmarks[0].x * 640 - 320) * (1 - n_images / 5) + 320, (results.poseLandmarks[0].y * 360 - 180) * (1 - n_images / 5) + 180);
-                saveCtx.lineTo((results.poseLandmarks[15].x * 640 - 320) * (1 - n_images / 5) + 320, (results.poseLandmarks[15].y * 360 - 180) * (1 - n_images / 5) + 180);
-                saveCtx.lineTo((results.poseLandmarks[27].x * 640 - 320) * (1 - n_images / 5) + 320, (results.poseLandmarks[27].y * 360 - 180) * (1 - n_images / 5) + 180);
-                saveCtx.lineTo((results.poseLandmarks[28].x * 640 - 320) * (1 - n_images / 5) + 320, (results.poseLandmarks[28].y * 360 - 180) * (1 - n_images / 5) + 180);
-                saveCtx.lineTo((results.poseLandmarks[16].x * 640 - 320) * (1 - n_images / 5) + 320, (results.poseLandmarks[16].y * 360 - 180) * (1 - n_images / 5) + 180);
-                saveCtx.lineTo((results.poseLandmarks[0].x * 640 - 320) * (1 - n_images / 5) + 320, (results.poseLandmarks[0].y * 360 - 180) * (1 - n_images / 5) + 180);
-                saveCtx.stroke();
-                last_pic = Date.now()
-                n_images = n_images - 1
-                if (n_images <= 0) {
-                    last_pic = -1
-                    console.log('Ending Recording');
-                }
+
+        if (Date.now() - last_pic >= 1000) {
+            saveCtx.beginPath();
+            saveCtx.moveTo((results.poseLandmarks[0].x * videoWidth - videoWidth / 2) * (1 - n_images / 10) + videoWidth / 2, (results.poseLandmarks[0].y * videoHeight - videoHeight / 2) * (1 - n_images / 10) + videoHeight / 2);
+            saveCtx.lineTo((results.poseLandmarks[15].x * videoWidth - videoWidth / 2) * (1 - n_images / 10) + videoWidth / 2, (results.poseLandmarks[15].y * videoHeight - videoHeight / 2) * (1 - n_images / 10) + videoHeight / 2);
+            saveCtx.lineTo((results.poseLandmarks[27].x * videoWidth - videoWidth / 2) * (1 - n_images / 10) + videoWidth / 2, (results.poseLandmarks[27].y * videoHeight - videoHeight / 2) * (1 - n_images / 10) + videoHeight / 2);
+            saveCtx.lineTo((results.poseLandmarks[28].x * videoWidth - videoWidth / 2) * (1 - n_images / 10) + videoWidth / 2, (results.poseLandmarks[28].y * videoHeight - videoHeight / 2) * (1 - n_images / 10) + videoHeight / 2);
+            saveCtx.lineTo((results.poseLandmarks[16].x * videoWidth - videoWidth / 2) * (1 - n_images / 10) + videoWidth / 2, (results.poseLandmarks[16].y * videoHeight - videoHeight / 2) * (1 - n_images / 10) + videoHeight / 2);
+            saveCtx.lineTo((results.poseLandmarks[0].x * videoWidth - videoWidth / 2) * (1 - n_images / 10) + videoWidth / 2, (results.poseLandmarks[0].y * videoHeight - videoHeight / 2) * (1 - n_images / 10) + videoHeight / 2);
+            saveCtx.stroke();
+            last_pic = Date.now()
+            n_images = n_images - 1
+            if (n_images <= 0) {
+                n_images = 10
+                resetCanvas();
             }
         }
 
@@ -122,8 +114,8 @@
         onFrame: async () => {
             await pose.send({ image: videoElement });
         },
-        width: 1280,
-        height: 720
+        width: videoWidth,
+        height: videoHeight
     });
     camera.start();
     resetCanvas();

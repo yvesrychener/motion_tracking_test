@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js"
+        crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils_3d/control_utils_3d.js"
+        crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"
+        crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+    <style>
+        .split {
+            height: 100%;
+            width: 50%;
+            position: fixed;
+            z-index: 1;
+            top: 0;
+            overflow-x: hidden;
+        }
+
+        .left {
+            left: 0;
+            background-color: "rgba(0, 0, 0)";
+        }
+
+        .right {
+            right: 0;
+            background-color: "rgba(0, 0, 0)";
+        }
+
+        .centered {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+    </style>
+</head>
+
+
+<body style="background-color:rgb(0, 0, 0);">
+    <div class="split left">
+        <div class="centered">
+            <canvas class="output_canvas" style="transform:scaleX(-1);" width="500px" height="700px"></canvas>
+        </div>
+    </div>
+    <div class="split right">
+        <div class="centered">
+            <canvas class="save_canvas" style="transform:scaleX(-1)" width="700px" height="700px"></canvas>
+        </div>
+    </div>
+    <div class="container">
+        <br>
+        <video class="input_video" style="visibility: hidden;"></video>
+    </div>
+</body>
+
+</html>
+
+<script>
+    const videoElement = document.getElementsByClassName('input_video')[0];
+    const canvasElement = document.getElementsByClassName('output_canvas')[0];
+    const saveElement = document.getElementsByClassName('save_canvas')[0];
+    const saveCtx = saveElement.getContext('2d');
+    const canvasCtx = canvasElement.getContext('2d');
+    const imageSize = 720; //720p image size
+    const videoWidth = imageSize * 5 / 7; // for landscape: 1280
+    const videoHeight = imageSize; // for landscape: 720
+    last_pic = 1;
+    n_images = 20;
+    showing_since = -1;
+
+    function resetCanvas() {
+        console.log('Resetting Recording');
+        saveCtx.fillStyle = "rgba(0, 0, 0)";//"rgba(255, 255, 255)";
+        saveCtx.fillRect(1, 1, videoWidth * 4, videoHeight);
+    }
+
+    function onResults(results) {
+        if (!results.poseLandmarks) {
+            return;
+        }
+
+        canvasCtx.save();
+        canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+
+        // Only overwrite existing pixels.
+        canvasCtx.globalCompositeOperation = 'source-in';
+        canvasCtx.fillStyle = "rgba(0, 255, 0, 0.5)";//'#00FF00';
+        canvasCtx.fillRect(0, 0, canvasElement.width, canvasElement.height);
+
+        // Only overwrite missing pixels.
+        canvasCtx.globalCompositeOperation = 'destination-atop';
+        canvasCtx.drawImage(
+            results.image, 0, 0, canvasElement.width, canvasElement.height);
+
+        // Change the image pixels to black and white
+        // curtesy of stack overflow
+        var img = canvasCtx.getImageData(0, 0, canvasElement.width, canvasElement.height);
+        for (var y = 0; y < img.height; y++) {
+            for (var x = 0; x < img.width; x++) {
+                var i = (y * 4) * img.width + x * 4;
+                var avg = (img.data[i] + img.data[i + 1] + img.data[i + 2]) / 3;
+                img.data[i] = avg;
+                img.data[i + 1] = avg;
+                img.data[i + 2] = avg;
+            }
+        }
+        canvasCtx.putImageData(img, 0, 0, 0, 0, img.width, img.height);
+
+        canvasCtx.globalCompositeOperation = 'source-over';
+        drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS,
+            { color: "rgba(99, 0, 255)", lineWidth: 4 });
+        //drawLandmarks(canvasCtx, results.poseLandmarks,
+        //    { color: '#FF0000', lineWidth: 2 });
+        canvasCtx.restore();
+
+        if (showing_since < 0) {
+            // we are currently recording
+            if (Date.now() - last_pic >= 250) {
+                saveCtx.strokeStyle = "rgba(99, 0, 255)";
+                saveCtx.lineWidth = 3.0;
+                saveCtx.beginPath();
+                mysize = 0.5
+                saveCtx.moveTo((results.poseLandmarks[0].x * videoWidth - videoWidth / 2) * (mysize) * 0.7 + videoWidth / 2 - 15 * (10 - n_images) + 150, (results.poseLandmarks[0].y * videoHeight - videoHeight / 2) * (mysize) * 0.7 + videoHeight / 2 + 25 * (13 - n_images) - 100);
+                saveCtx.lineTo((results.poseLandmarks[15].x * videoWidth - videoWidth / 2) * (mysize) * 0.7 + videoWidth / 2 - 15 * (10 - n_images) + 150, (results.poseLandmarks[15].y * videoHeight - videoHeight / 2) * (mysize) * 0.7 + videoHeight / 2 + 25 * (13 - n_images) - 100);
+                saveCtx.lineTo((results.poseLandmarks[27].x * videoWidth - videoWidth / 2) * (mysize) * 0.7 + videoWidth / 2 - 15 * (10 - n_images) + 150, (results.poseLandmarks[27].y * videoHeight - videoHeight / 2) * (mysize) * 0.7 + videoHeight / 2 + 25 * (13 - n_images) - 100);
+                saveCtx.lineTo((results.poseLandmarks[28].x * videoWidth - videoWidth / 2) * (mysize) * 0.7 + videoWidth / 2 - 15 * (10 - n_images) + 150, (results.poseLandmarks[28].y * videoHeight - videoHeight / 2) * (mysize) * 0.7 + videoHeight / 2 + 25 * (13 - n_images) - 100);
+                saveCtx.lineTo((results.poseLandmarks[16].x * videoWidth - videoWidth / 2) * (mysize) * 0.7 + videoWidth / 2 - 15 * (10 - n_images) + 150, (results.poseLandmarks[16].y * videoHeight - videoHeight / 2) * (mysize) * 0.7 + videoHeight / 2 + 25 * (13 - n_images) - 100);
+                saveCtx.lineTo((results.poseLandmarks[0].x * videoWidth - videoWidth / 2) * (mysize) * 0.7 + videoWidth / 2 - 15 * (10 - n_images) + 150, (results.poseLandmarks[0].y * videoHeight - videoHeight / 2) * (mysize) * 0.7 + videoHeight / 2 + 25 * (13 - n_images) - 100);
+                saveCtx.stroke();
+                last_pic = Date.now();
+                n_images = n_images - 1;
+                if (n_images <= 0) {
+                    showing_since = Date.now();
+                    n_images = 20;
+                }
+            }
+        } else {
+            if (Date.now() - showing_since >= 5000) {
+                // restart recording
+                showing_since = -1;
+                resetCanvas();
+            }
+        }
+
+
+        console.log(results.poseLandmarks[0]);
+    }
+
+    const pose = new Pose({
+        locateFile: (file) => {
+            return `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`;
+        }
+    });
+    pose.setOptions({
+        modelComplexity: 1,
+        smoothLandmarks: true,
+        enableSegmentation: true,
+        smoothSegmentation: true,
+        minDetectionConfidence: 0.5,
+        minTrackingConfidence: 0.5
+    });
+    pose.onResults(onResults);
+
+    const camera = new Camera(videoElement, {
+        onFrame: async () => {
+            await pose.send({ image: videoElement });
+        },
+        width: videoWidth,
+        height: videoHeight
+    });
+    camera.start();
+    resetCanvas();
+
+</script>

@@ -42,7 +42,7 @@
 </head>
 
 
-<body style="background-color:black;">
+<body style="background-color:rgb(0, 0, 0);">
     <div class="split left">
         <div class="centered">
             <canvas class="output_canvas" style="transform:scaleX(-1);" width="500px" height="700px"></canvas>
@@ -50,7 +50,7 @@
     </div>
     <div class="split right">
         <div class="centered">
-            <canvas class="save_canvas" style="transform:scaleX(-1)" width="700px" height="700px"></canvas>
+            <canvas class="save_canvas" width="500px" height="700px"></canvas>
         </div>
     </div>
     <div class="container">
@@ -67,9 +67,34 @@
     const saveElement = document.getElementsByClassName('save_canvas')[0];
     const saveCtx = saveElement.getContext('2d');
     const canvasCtx = canvasElement.getContext('2d');
-    const imageSize = 720; //720p image size
+    const imageSize = 700; //720p image size
     const videoWidth = imageSize * 5 / 7; // for landscape: 1280
     const videoHeight = imageSize; // for landscape: 720
+    const gradientColors = ["rgb(255, 255, 255)",
+        "rgb(255, 246, 255)",
+        "rgb(255, 237, 255)",
+        "rgb(255, 228, 255)",
+        "rgb(255, 218, 255)",
+        "rgb(255, 209, 255)",
+        "rgb(255, 200, 255)",
+        "rgb(255, 190, 255)",
+        "rgb(255, 180, 255)",
+        "rgb(255, 170, 255)",
+        "rgb(255, 160, 255)",
+        "rgb(255, 149, 255)",
+        "rgb(255, 139, 255)",
+        "rgb(255, 127, 255)",
+        "rgb(255, 115, 255)",
+        "rgb(255, 102, 255)",
+        "rgb(255, 87, 255)",
+        "rgb(255, 70, 255)",
+        "rgb(255, 48, 255)",
+        "rgb(255, 0, 255)"
+    ]
+
+    const plotfactor = 0.4 //size of the small image
+    const ystep = 100 //overall y step
+
     last_pic = 1;
     n_images = 20;
     showing_since = -1;
@@ -78,6 +103,31 @@
         console.log('Resetting Recording');
         saveCtx.fillStyle = "rgba(0, 0, 0)";//"rgba(255, 255, 255)";
         saveCtx.fillRect(1, 1, videoWidth, videoHeight);
+    }
+
+    function drawWindow(x, y, color) {
+        saveCtx.strokeStyle = color;
+        saveCtx.lineWidth = 3.0;
+        saveCtx.beginPath();
+        saveCtx.moveTo(x, y);
+        saveCtx.lineTo(x + videoWidth * plotfactor, y);
+        saveCtx.lineTo(x + videoWidth * plotfactor, y + videoHeight * plotfactor);
+        saveCtx.lineTo(x, y + videoHeight * plotfactor);
+        saveCtx.lineTo(x, y);
+        saveCtx.stroke();
+    }
+
+    function drawShape(x, y, color, results) {
+        saveCtx.strokeStyle = color;
+        saveCtx.lineWidth = 3.0;
+        saveCtx.beginPath();
+        saveCtx.moveTo((1 - results.poseLandmarks[0].x) * videoWidth * plotfactor + x, results.poseLandmarks[0].y * videoHeight * plotfactor + y);
+        saveCtx.lineTo((1 - results.poseLandmarks[15].x) * videoWidth * plotfactor + x, results.poseLandmarks[15].y * videoHeight * plotfactor + y);
+        saveCtx.lineTo((1 - results.poseLandmarks[27].x) * videoWidth * plotfactor + x, results.poseLandmarks[27].y * videoHeight * plotfactor + y);
+        saveCtx.lineTo((1 - results.poseLandmarks[28].x) * videoWidth * plotfactor + x, results.poseLandmarks[28].y * videoHeight * plotfactor + y);
+        saveCtx.lineTo((1 - results.poseLandmarks[16].x) * videoWidth * plotfactor + x, results.poseLandmarks[16].y * videoHeight * plotfactor + y);
+        saveCtx.lineTo((1 - results.poseLandmarks[0].x) * videoWidth * plotfactor + x, results.poseLandmarks[0].y * videoHeight * plotfactor + y);
+        saveCtx.stroke();
     }
 
     function onResults(results) {
@@ -98,26 +148,35 @@
         canvasCtx.drawImage(
             results.image, 0, 0, canvasElement.width, canvasElement.height);
 
+        // Change the image pixels to black and white
+        // curtesy of stack overflow
+        var img = canvasCtx.getImageData(0, 0, canvasElement.width, canvasElement.height);
+        for (var y = 0; y < img.height; y++) {
+            for (var x = 0; x < img.width; x++) {
+                var i = (y * 4) * img.width + x * 4;
+                var avg = (img.data[i] + img.data[i + 1] + img.data[i + 2]) / 3;
+                img.data[i] = avg;
+                img.data[i + 1] = avg;
+                img.data[i + 2] = avg;
+            }
+        }
+        canvasCtx.putImageData(img, 0, 0, 0, 0, img.width, img.height);
+
         canvasCtx.globalCompositeOperation = 'source-over';
         drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS,
-            { color: '#0000FF', lineWidth: 4 });
-        drawLandmarks(canvasCtx, results.poseLandmarks,
-            { color: '#FF0000', lineWidth: 2 });
+            { color: gradientColors[19], lineWidth: 4 });
+        //drawLandmarks(canvasCtx, results.poseLandmarks,
+        //    { color: '#FF0000', lineWidth: 2 });
         canvasCtx.restore();
 
         if (showing_since < 0) {
             // we are currently recording
             if (Date.now() - last_pic >= 250) {
-                saveCtx.strokeStyle = "rgba(0, 0, 192)";
-                saveCtx.lineWidth = 3.0;
-                saveCtx.beginPath();
-                saveCtx.moveTo((results.poseLandmarks[0].x * videoWidth - videoWidth / 2) * (1 - n_images / 20) * 0.7 + videoWidth / 2 - 20 * (10 - n_images) + 150, (results.poseLandmarks[0].y * videoHeight - videoHeight / 2) * (1 - n_images / 20) * 0.7 + videoHeight / 2 + 15 * (10 - n_images) - 100);
-                saveCtx.lineTo((results.poseLandmarks[15].x * videoWidth - videoWidth / 2) * (1 - n_images / 20) * 0.7 + videoWidth / 2 - 20 * (10 - n_images) + 150, (results.poseLandmarks[15].y * videoHeight - videoHeight / 2) * (1 - n_images / 20) * 0.7 + videoHeight / 2 + 15 * (10 - n_images) - 100);
-                saveCtx.lineTo((results.poseLandmarks[27].x * videoWidth - videoWidth / 2) * (1 - n_images / 20) * 0.7 + videoWidth / 2 - 20 * (10 - n_images) + 150, (results.poseLandmarks[27].y * videoHeight - videoHeight / 2) * (1 - n_images / 20) * 0.7 + videoHeight / 2 + 15 * (10 - n_images) - 100);
-                saveCtx.lineTo((results.poseLandmarks[28].x * videoWidth - videoWidth / 2) * (1 - n_images / 20) * 0.7 + videoWidth / 2 - 20 * (10 - n_images) + 150, (results.poseLandmarks[28].y * videoHeight - videoHeight / 2) * (1 - n_images / 20) * 0.7 + videoHeight / 2 + 15 * (10 - n_images) - 100);
-                saveCtx.lineTo((results.poseLandmarks[16].x * videoWidth - videoWidth / 2) * (1 - n_images / 20) * 0.7 + videoWidth / 2 - 20 * (10 - n_images) + 150, (results.poseLandmarks[16].y * videoHeight - videoHeight / 2) * (1 - n_images / 20) * 0.7 + videoHeight / 2 + 15 * (10 - n_images) - 100);
-                saveCtx.lineTo((results.poseLandmarks[0].x * videoWidth - videoWidth / 2) * (1 - n_images / 20) * 0.7 + videoWidth / 2 - 20 * (10 - n_images) + 150, (results.poseLandmarks[0].y * videoHeight - videoHeight / 2) * (1 - n_images / 20) * 0.7 + videoHeight / 2 + 15 * (10 - n_images) - 100);
-                saveCtx.stroke();
+                x = videoWidth * (1 - plotfactor) * (20 - n_images) / 19
+                y = videoHeight / 2 - (videoHeight * plotfactor + ystep) / 2 + ystep * (20 - n_images) / 19
+                //drawWindow(x, y, gradientColors[20 - n_images]);
+                drawShape(x, y, gradientColors[20 - n_images], results)
+
                 last_pic = Date.now();
                 n_images = n_images - 1;
                 if (n_images <= 0) {
@@ -134,7 +193,7 @@
         }
 
 
-        console.log(results.poseLandmarks[0]);
+        //console.log(results.poseLandmarks[0]);
     }
 
     const pose = new Pose({

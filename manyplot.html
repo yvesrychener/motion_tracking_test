@@ -42,7 +42,7 @@
 </head>
 
 
-<body style="background-color:rgb(95, 10, 10);">
+<body style="background-color:rgb(0, 0, 0);">
     <canvas class="output_canvas" style="transform:scaleX(-1);" width="500px" height="700px"></canvas>
     <canvas class="save_canvas" width="800px" height="700px"></canvas>
     <div class="container">
@@ -85,26 +85,26 @@
     // ]
 
     const gradientColors = [
-        "rgb(255, 255, 255)",
-        "rgb(247, 254, 252)",
-        "rgb(239, 253, 249)",
-        "rgb(231, 252, 245)",
-        "rgb(222, 251, 242)",
-        "rgb(214, 250, 239)",
-        "rgb(205, 249, 236)",
-        "rgb(197, 248, 233)",
-        "rgb(188, 247, 230)",
-        "rgb(179, 246, 227)",
-        "rgb(169, 245, 224)",
-        "rgb(159, 244, 220)",
-        "rgb(149, 242, 217)",
-        "rgb(139, 241, 214)",
-        "rgb(128, 240, 211)",
-        "rgb(116, 239, 208)",
-        "rgb(103, 237, 205)",
-        "rgb(88, 236, 202)",
-        "rgb(71, 234, 199)",
-        "rgb(48, 233, 196)",
+        "rgb(64, 64, 64)",
+        "rgb(66, 73, 71)",
+        "rgb(69, 82, 77)",
+        "rgb(71, 92, 84)",
+        "rgb(72, 101, 91)",
+        "rgb(73, 110, 98)",
+        "rgb(74, 120, 105)",
+        "rgb(75, 130, 112)",
+        "rgb(75, 140, 120)",
+        "rgb(74, 150, 127)",
+        "rgb(73, 160, 134)",
+        "rgb(72, 170, 142)",
+        "rgb(70, 180, 149)",
+        "rgb(67, 191, 157)",
+        "rgb(63, 201, 165)",
+        "rgb(59, 212, 172)",
+        "rgb(52, 222, 180)",
+        "rgb(43, 233, 188)",
+        "rgb(30, 244, 196)",
+        "rgb(0, 255, 204)",
     ]
 
     const plotfactor = 0.75 //size of the small image
@@ -229,7 +229,7 @@
                 //x = videoWidth * (1 - plotfactor) * (totalImages - n_images) / (totalImages - 1)
                 y = videoHeight / 2 - (videoHeight * plotfactor + ystep) / 2 + ystep * (totalImages - n_images) / (totalImages - 1)
                 //drawWindow(x, y, gradientColors[0]);
-                drawShape(x, y, gradientColors[20 - Math.floor(20 * n_images / totalImages)], results)
+                drawShape(x, y, gradientColors[20 - n_images], results)
 
                 last_pic = Date.now();
                 n_images = n_images - 1;

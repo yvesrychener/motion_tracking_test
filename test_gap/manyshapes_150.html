@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js"
+        crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils_3d/control_utils_3d.js"
+        crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"
+        crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+    <style>
+        .split {
+            height: 100%;
+            width: 50%;
+            position: fixed;
+            z-index: 1;
+            top: 0;
+            overflow-x: hidden;
+        }
+
+        .left {
+            left: 0;
+            background-color: "rgba(0, 0, 0)";
+        }
+
+        .right {
+            right: 0;
+            background-color: "rgba(0, 0, 0)";
+        }
+
+        .centered {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+    </style>
+</head>
+
+
+<body style="background-color:rgb(0, 0, 0);">
+    <canvas class="output_canvas" style="transform:scaleX(-1);" width="500px" height="700px"></canvas>
+    <canvas class="blankCanvas" width="150px" height="700px"></canvas>
+    <canvas class="save_canvas" width="500px" height="700px"></canvas>
+    <div class="container">
+        <br>
+        <video class="input_video" style="visibility: hidden;"></video>
+    </div>
+</body>
+
+</html>
+
+<script>
+    const videoElement = document.getElementsByClassName('input_video')[0];
+    const canvasElement = document.getElementsByClassName('output_canvas')[0];
+    const saveElement = document.getElementsByClassName('save_canvas')[0];
+    const saveCtx = saveElement.getContext('2d');
+    const canvasCtx = canvasElement.getContext('2d');
+    const imageSize = 700; //720p image size
+    const videoWidth = imageSize * 5 / 7; // for landscape: 1280
+    const videoHeight = imageSize; // for landscape: 720
+    // const gradientColors = ["rgb(255, 255, 255)",
+    //     "rgb(255, 246, 255)",
+    //     "rgb(255, 237, 255)",
+    //     "rgb(255, 228, 255)",
+    //     "rgb(255, 218, 255)",
+    //     "rgb(255, 209, 255)",
+    //     "rgb(255, 200, 255)",
+    //     "rgb(255, 190, 255)",
+    //     "rgb(255, 180, 255)",
+    //     "rgb(255, 170, 255)",
+    //     "rgb(255, 160, 255)",
+    //     "rgb(255, 149, 255)",
+    //     "rgb(255, 139, 255)",
+    //     "rgb(255, 127, 255)",
+    //     "rgb(255, 115, 255)",
+    //     "rgb(255, 102, 255)",
+    //     "rgb(255, 87, 255)",
+    //     "rgb(255, 70, 255)",
+    //     "rgb(255, 48, 255)",
+    //     "rgb(255, 0, 255)"
+    // ]
+
+    const gradientColors = [
+        "rgb(255, 255, 255)",
+        "rgb(247, 254, 252)",
+        "rgb(239, 253, 249)",
+        "rgb(231, 252, 245)",
+        "rgb(222, 251, 242)",
+        "rgb(214, 250, 239)",
+        "rgb(205, 249, 236)",
+        "rgb(197, 248, 233)",
+        "rgb(188, 247, 230)",
+        "rgb(179, 246, 227)",
+        "rgb(169, 245, 224)",
+        "rgb(159, 244, 220)",
+        "rgb(149, 242, 217)",
+        "rgb(139, 241, 214)",
+        "rgb(128, 240, 211)",
+        "rgb(116, 239, 208)",
+        "rgb(103, 237, 205)",
+        "rgb(88, 236, 202)",
+        "rgb(71, 234, 199)",
+        "rgb(48, 233, 196)",
+    ]
+
+    const plotfactor = 0.6 //size of the small image
+    const ystep = 100 //overall y step
+    const totalImages = 200;
+    const timestep = 50;
+
+    last_pic = 1;
+    n_images = totalImages;
+    showing_since = -1;
+
+    function resetCanvas() {
+        console.log('Resetting Recording');
+        saveCtx.fillStyle = "rgba(0, 0, 0)";//"rgba(255, 255, 255)";
+        saveCtx.fillRect(1, 1, videoWidth, videoHeight);
+    }
+
+    function drawWindow(x, y, color) {
+        saveCtx.strokeStyle = color;
+        saveCtx.lineWidth = 3.0;
+        saveCtx.beginPath();
+        saveCtx.moveTo(x, y);
+        saveCtx.lineTo(x + videoWidth * plotfactor, y);
+        saveCtx.lineTo(x + videoWidth * plotfactor, y + videoHeight * plotfactor);
+        saveCtx.lineTo(x, y + videoHeight * plotfactor);
+        saveCtx.lineTo(x, y);
+        saveCtx.stroke();
+    }
+
+    function drawShape(x, y, color, results) {
+        saveCtx.strokeStyle = color;
+        saveCtx.lineWidth = 1;
+        saveCtx.beginPath();
+        saveCtx.moveTo((1 - results.poseLandmarks[0].x) * videoWidth * plotfactor + x, results.poseLandmarks[0].y * videoHeight * plotfactor + y);
+        saveCtx.lineTo((1 - results.poseLandmarks[15].x) * videoWidth * plotfactor + x, results.poseLandmarks[15].y * videoHeight * plotfactor + y);
+        saveCtx.lineTo((1 - results.poseLandmarks[27].x) * videoWidth * plotfactor + x, results.poseLandmarks[27].y * videoHeight * plotfactor + y);
+        saveCtx.lineTo((1 - results.poseLandmarks[28].x) * videoWidth * plotfactor + x, results.poseLandmarks[28].y * videoHeight * plotfactor + y);
+        saveCtx.lineTo((1 - results.poseLandmarks[16].x) * videoWidth * plotfactor + x, results.poseLandmarks[16].y * videoHeight * plotfactor + y);
+        saveCtx.lineTo((1 - results.poseLandmarks[0].x) * videoWidth * plotfactor + x, results.poseLandmarks[0].y * videoHeight * plotfactor + y);
+        saveCtx.stroke();
+    }
+
+    function onResults(results) {
+        if (!results.poseLandmarks) {
+            canvasCtx.save();
+            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+
+            // Only overwrite existing pixels.
+            canvasCtx.globalCompositeOperation = 'source-in';
+            canvasCtx.fillStyle = "rgba(0, 255, 0, 0.5)";//'#00FF00';
+            canvasCtx.fillRect(0, 0, canvasElement.width, canvasElement.height);
+
+            // Only overwrite missing pixels.
+            canvasCtx.globalCompositeOperation = 'destination-atop';
+            canvasCtx.drawImage(
+                results.image, 0, 0, canvasElement.width, canvasElement.height);
+
+            // Change the image pixels to black and white
+            // curtesy of stack overflow
+            var img = canvasCtx.getImageData(0, 0, canvasElement.width, canvasElement.height);
+            for (var y = 0; y < img.height; y++) {
+                for (var x = 0; x < img.width; x++) {
+                    var i = (y * 4) * img.width + x * 4;
+                    var avg = (img.data[i] + img.data[i + 1] + img.data[i + 2]) / 3;
+                    img.data[i] = avg;
+                    img.data[i + 1] = avg;
+                    img.data[i + 2] = avg;
+                }
+            }
+            canvasCtx.putImageData(img, 0, 0, 0, 0, img.width, img.height);
+            return;
+        }
+
+        canvasCtx.save();
+        canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+
+        // Only overwrite existing pixels.
+        canvasCtx.globalCompositeOperation = 'source-in';
+        canvasCtx.fillStyle = "rgba(0, 255, 0, 0.5)";//'#00FF00';
+        canvasCtx.fillRect(0, 0, canvasElement.width, canvasElement.height);
+
+        // Only overwrite missing pixels.
+        canvasCtx.globalCompositeOperation = 'destination-atop';
+        canvasCtx.drawImage(
+            results.image, 0, 0, canvasElement.width, canvasElement.height);
+
+        // Change the image pixels to black and white
+        // curtesy of stack overflow
+        var img = canvasCtx.getImageData(0, 0, canvasElement.width, canvasElement.height);
+        for (var y = 0; y < img.height; y++) {
+            for (var x = 0; x < img.width; x++) {
+                var i = (y * 4) * img.width + x * 4;
+                var avg = (img.data[i] + img.data[i + 1] + img.data[i + 2]) / 3;
+                img.data[i] = avg;
+                img.data[i + 1] = avg;
+                img.data[i + 2] = avg;
+            }
+        }
+        canvasCtx.putImageData(img, 0, 0, 0, 0, img.width, img.height);
+
+        canvasCtx.globalCompositeOperation = 'source-over';
+        //drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS,
+        //    { color: gradientColors[19], lineWidth: 2 });
+        //drawLandmarks(canvasCtx, results.poseLandmarks,
+        //    { color: gradientColors[19], lineWidth: 1 });
+        canvasCtx.strokeStyle = gradientColors[19];
+        canvasCtx.lineWidth = 3;
+        canvasCtx.beginPath();
+        canvasCtx.moveTo((results.poseLandmarks[0].x) * videoWidth, results.poseLandmarks[0].y * videoHeight);
+        canvasCtx.lineTo((results.poseLandmarks[15].x) * videoWidth, results.poseLandmarks[15].y * videoHeight);
+        canvasCtx.lineTo((results.poseLandmarks[27].x) * videoWidth, results.poseLandmarks[27].y * videoHeight);
+        canvasCtx.lineTo((results.poseLandmarks[28].x) * videoWidth, results.poseLandmarks[28].y * videoHeight);
+        canvasCtx.lineTo((results.poseLandmarks[16].x) * videoWidth, results.poseLandmarks[16].y * videoHeight);
+        canvasCtx.lineTo((results.poseLandmarks[0].x) * videoWidth, results.poseLandmarks[0].y * videoHeight);
+        canvasCtx.stroke();
+        canvasCtx.restore();
+
+        if (showing_since < 0) {
+            // we are currently recording
+            if (Date.now() - last_pic >= timestep) {
+                x = videoWidth * (1 - plotfactor) * (totalImages - n_images) / (totalImages - 1)
+                y = videoHeight / 2 - (videoHeight * plotfactor + ystep) / 2 + ystep * (totalImages - n_images) / (totalImages - 1)
+                //drawWindow(x, y, gradientColors[20 - n_images]);
+                drawShape(x, y, gradientColors[20 - Math.floor(20 * n_images / totalImages)], results)
+
+                last_pic = Date.now();
+                n_images = n_images - 1;
+                if (n_images <= 0) {
+                    showing_since = Date.now();
+                    n_images = totalImages;
+                }
+            }
+        } else {
+            if (Date.now() - showing_since >= 5000) {
+                // restart recording
+                showing_since = -1;
+                resetCanvas();
+            }
+        }
+
+
+        //console.log(results.poseLandmarks[0]);
+    }
+
+    const pose = new Pose({
+        locateFile: (file) => {
+            return `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`;
+        }
+    });
+    pose.setOptions({
+        modelComplexity: 1,
+        smoothLandmarks: true,
+        enableSegmentation: true,
+        smoothSegmentation: true,
+        minDetectionConfidence: 0.5,
+        minTrackingConfidence: 0.5
+    });
+    pose.onResults(onResults);
+
+    const camera = new Camera(videoElement, {
+        onFrame: async () => {
+            await pose.send({ image: videoElement });
+        },
+        width: videoWidth,
+        height: videoHeight
+    });
+    camera.start();
+    resetCanvas();
+
+</script>

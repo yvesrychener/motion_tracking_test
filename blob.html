@@ -93,6 +93,32 @@
 
     function onResults(results) {
         if (!results.poseLandmarks) {
+            canvasCtx.save();
+            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+
+            // Only overwrite existing pixels.
+            canvasCtx.globalCompositeOperation = 'source-in';
+            canvasCtx.fillStyle = "rgba(0, 255, 0, 0.5)";//'#00FF00';
+            canvasCtx.fillRect(0, 0, canvasElement.width, canvasElement.height);
+
+            // Only overwrite missing pixels.
+            canvasCtx.globalCompositeOperation = 'destination-atop';
+            canvasCtx.drawImage(
+                results.image, 0, 0, canvasElement.width, canvasElement.height);
+
+            // Change the image pixels to black and white
+            // curtesy of stack overflow
+            var img = canvasCtx.getImageData(0, 0, canvasElement.width, canvasElement.height);
+            for (var y = 0; y < img.height; y++) {
+                for (var x = 0; x < img.width; x++) {
+                    var i = (y * 4) * img.width + x * 4;
+                    var avg = (img.data[i] + img.data[i + 1] + img.data[i + 2]) / 3;
+                    img.data[i] = avg;
+                    img.data[i + 1] = avg;
+                    img.data[i + 2] = avg;
+                }
+            }
+            canvasCtx.putImageData(img, 0, 0, 0, 0, img.width, img.height);
             return;
         }
 

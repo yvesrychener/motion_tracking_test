@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js"
+        crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils_3d/control_utils_3d.js"
+        crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"
+        crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+    <style>
+        .split {
+            height: 100%;
+            width: 50%;
+            position: fixed;
+            z-index: 1;
+            top: 0;
+            overflow-x: hidden;
+        }
+
+        .left {
+            left: 0;
+            background-color: "rgba(0, 0, 0)";
+        }
+
+        .right {
+            right: 0;
+            background-color: "rgba(0, 0, 0)";
+        }
+
+        .centered {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+    </style>
+</head>
+
+
+<body style="background-color:rgb(0, 0, 0);">
+    <div class="centered">
+        <canvas class="output_canvas" style="transform:scaleX(-1);" width="500px" height="700px"></canvas>
+    </div>
+
+    <div class="container">
+        <br>
+        <video class="input_video" style="visibility: hidden;"></video>
+    </div>
+</body>
+
+</html>
+
+<script>
+    const videoElement = document.getElementsByClassName('input_video')[0];
+    const canvasElement = document.getElementsByClassName('output_canvas')[0];
+    const canvasCtx = canvasElement.getContext('2d');
+    const imageSize = 720; //720p image size
+    const videoWidth = imageSize * 5 / 7; // for landscape: 1280
+    const videoHeight = imageSize; // for landscape: 720
+    const lineWidth = 75;
+    canvasCtx.lineCap = 'round';
+
+    joints = [
+        [12, 11],
+        [14, 12],
+        [16, 14],
+        [11, 13],
+        [13, 15],
+        [12, 24],
+        [24, 23],
+        [11, 23],
+        [24, 11],
+        [12, 23],
+        [24, 26],
+        [26, 28],
+        [23, 25],
+        [27, 25]
+    ];
+
+    smoothings = [
+        [[16, 14], [12, 24]],
+        [[14, 12], [24, 26]],
+        [[15, 13], [11, 23]],
+        [[13, 11], [23, 25]],
+        [[28, 26], [23, 25]],
+        [[27, 25], [24, 26]]
+    ];
+
+    function onResults(results) {
+        if (!results.poseLandmarks) {
+            return;
+        }
+
+        canvasCtx.save();
+        canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+
+        // Only overwrite existing pixels.
+        canvasCtx.globalCompositeOperation = 'source-in';
+        canvasCtx.fillStyle = "rgba(0, 255, 0, 0.5)";//'#00FF00';
+        canvasCtx.fillRect(0, 0, canvasElement.width, canvasElement.height);
+
+        // Only overwrite missing pixels.
+        canvasCtx.globalCompositeOperation = 'destination-atop';
+        canvasCtx.drawImage(
+            results.image, 0, 0, canvasElement.width, canvasElement.height);
+
+        // Change the image pixels to black and white
+        // curtesy of stack overflow
+        var img = canvasCtx.getImageData(0, 0, canvasElement.width, canvasElement.height);
+        for (var y = 0; y < img.height; y++) {
+            for (var x = 0; x < img.width; x++) {
+                var i = (y * 4) * img.width + x * 4;
+                var avg = (img.data[i] + img.data[i + 1] + img.data[i + 2]) / 3;
+                img.data[i] = avg;
+                img.data[i + 1] = avg;
+                img.data[i + 2] = avg;
+            }
+        }
+        canvasCtx.putImageData(img, 0, 0, 0, 0, img.width, img.height);
+
+        canvasCtx.globalCompositeOperation = 'source-over';
+        //drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS,
+        //    { color: "rgba(99, 0, 255)", lineWidth: 4 });
+
+        for (const joint of joints) {
+            canvasCtx.strokeStyle = "rgba(255, 0, 255)";
+            canvasCtx.lineWidth = lineWidth;
+            canvasCtx.beginPath();
+            canvasCtx.moveTo(results.poseLandmarks[joint[0]].x * videoWidth, results.poseLandmarks[joint[0]].y * videoHeight);
+            canvasCtx.lineTo(results.poseLandmarks[joint[1]].x * videoWidth, results.poseLandmarks[joint[1]].y * videoHeight);
+            canvasCtx.stroke();
+        }
+        for (const joint of smoothings) {
+            s1x = results.poseLandmarks[joint[0][0]].x * videoWidth;
+            s2x = results.poseLandmarks[joint[1][0]].x * videoWidth;
+            t1x = results.poseLandmarks[joint[0][1]].x * videoWidth;
+            t2x = results.poseLandmarks[joint[1][1]].x * videoWidth;
+            s1y = results.poseLandmarks[joint[0][0]].y * videoHeight;
+            s2y = results.poseLandmarks[joint[1][0]].y * videoHeight;
+            t1y = results.poseLandmarks[joint[0][1]].y * videoHeight;
+            t2y = results.poseLandmarks[joint[1][1]].y * videoHeight;
+            for (const l of [0, 0.2, 0.4, 0.6, 0.8, 1]) {
+                canvasCtx.beginPath();
+                canvasCtx.moveTo(s1x * l + (1 - l) * t1x, s1y * l + (1 - l) * t1y);
+                canvasCtx.lineTo(s2x * l + (1 - l) * t2x, s2y * l + (1 - l) * t2y);
+                canvasCtx.stroke();
+            }
+        }
+        headx = results.poseLandmarks[0].x * videoWidth;
+        heady = results.poseLandmarks[0].y * videoHeight;
+        lsx = results.poseLandmarks[12].x * videoWidth;
+        lsy = results.poseLandmarks[12].y * videoHeight;
+        rsx = results.poseLandmarks[11].x * videoWidth;
+        rsy = results.poseLandmarks[11].y * videoHeight;
+        csx = (lsx + rsx) / 2;
+        csy = (lsy + rsy) / 2;
+        neckx = (csx + 2 * headx) / 3;
+        necky = (csy + 2 * heady) / 3;
+        for (const l of [0, 0.2, 0.4, 0.6, 0.8, 1]) {
+            canvasCtx.beginPath();
+            canvasCtx.moveTo(lsx * l + (1 - l) * csx, lsy * l + (1 - l) * csy);
+            canvasCtx.lineTo(neckx * l + (1 - l) * headx, necky * l + (1 - l) * heady);
+            canvasCtx.stroke();
+
+            canvasCtx.beginPath();
+            canvasCtx.moveTo(rsx * l + (1 - l) * csx, rsy * l + (1 - l) * csy);
+            canvasCtx.lineTo(neckx * l + (1 - l) * headx, necky * l + (1 - l) * heady);
+            canvasCtx.stroke();
+        }
+
+        canvasCtx.restore();
+
+        // if (showing_since < 0) {
+        //     // we are currently recording
+        //     if (Date.now() - last_pic >= 250) {
+        //         saveCtx.strokeStyle = "rgba(99, 0, 255)";
+        //         saveCtx.lineWidth = 3.0;
+        //         saveCtx.beginPath();
+        //         saveCtx.moveTo((results.poseLandmarks[0].x * videoWidth - videoWidth / 2) * (1 - n_images / 20) * 0.7 + videoWidth / 2 - 20 * (10 - n_images) + 150, (results.poseLandmarks[0].y * videoHeight - videoHeight / 2) * (1 - n_images / 20) * 0.7 + videoHeight / 2 + 15 * (10 - n_images) - 100);
+        //         saveCtx.lineTo((results.poseLandmarks[15].x * videoWidth - videoWidth / 2) * (1 - n_images / 20) * 0.7 + videoWidth / 2 - 20 * (10 - n_images) + 150, (results.poseLandmarks[15].y * videoHeight - videoHeight / 2) * (1 - n_images / 20) * 0.7 + videoHeight / 2 + 15 * (10 - n_images) - 100);
+        //         saveCtx.lineTo((results.poseLandmarks[27].x * videoWidth - videoWidth / 2) * (1 - n_images / 20) * 0.7 + videoWidth / 2 - 20 * (10 - n_images) + 150, (results.poseLandmarks[27].y * videoHeight - videoHeight / 2) * (1 - n_images / 20) * 0.7 + videoHeight / 2 + 15 * (10 - n_images) - 100);
+        //         saveCtx.lineTo((results.poseLandmarks[28].x * videoWidth - videoWidth / 2) * (1 - n_images / 20) * 0.7 + videoWidth / 2 - 20 * (10 - n_images) + 150, (results.poseLandmarks[28].y * videoHeight - videoHeight / 2) * (1 - n_images / 20) * 0.7 + videoHeight / 2 + 15 * (10 - n_images) - 100);
+        //         saveCtx.lineTo((results.poseLandmarks[16].x * videoWidth - videoWidth / 2) * (1 - n_images / 20) * 0.7 + videoWidth / 2 - 20 * (10 - n_images) + 150, (results.poseLandmarks[16].y * videoHeight - videoHeight / 2) * (1 - n_images / 20) * 0.7 + videoHeight / 2 + 15 * (10 - n_images) - 100);
+        //         saveCtx.lineTo((results.poseLandmarks[0].x * videoWidth - videoWidth / 2) * (1 - n_images / 20) * 0.7 + videoWidth / 2 - 20 * (10 - n_images) + 150, (results.poseLandmarks[0].y * videoHeight - videoHeight / 2) * (1 - n_images / 20) * 0.7 + videoHeight / 2 + 15 * (10 - n_images) - 100);
+        //         saveCtx.stroke();
+        //         last_pic = Date.now();
+        //         n_images = n_images - 1;
+        //         if (n_images <= 0) {
+        //             showing_since = Date.now();
+        //             n_images = 20;
+        //         }
+        //     }
+        // } else {
+        //     if (Date.now() - showing_since >= 5000) {
+        //         // restart recording
+        //         showing_since = -1;
+        //         resetCanvas();
+        //     }
+        // }
+
+
+        //console.log(results.poseLandmarks[0]);
+    }
+
+    const pose = new Pose({
+        locateFile: (file) => {
+            return `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`;
+        }
+    });
+    pose.setOptions({
+        modelComplexity: 1,
+        smoothLandmarks: true,
+        enableSegmentation: true,
+        smoothSegmentation: true,
+        minDetectionConfidence: 0.5,
+        minTrackingConfidence: 0.5
+    });
+    pose.onResults(onResults);
+
+    const camera = new Camera(videoElement, {
+        onFrame: async () => {
+            await pose.send({ image: videoElement });
+        },
+        width: videoWidth,
+        height: videoHeight
+    });
+    camera.start();
+    resetCanvas();
+
+</script>

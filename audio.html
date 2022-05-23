@@ -186,6 +186,7 @@
             }
             canvasCtx.putImageData(img, 0, 0, 0, 0, img.width, img.height);
             if (playing) {
+                now = audioContext.currentTime;
                 oscBankHigh[0][1].gain.linearRampToValueAtTime(0, now + 0.1);
                 oscBankHigh[1][1].gain.linearRampToValueAtTime(0, now + 0.1);
                 oscBankLow[0][1].gain.linearRampToValueAtTime(0, now + 0.1);
